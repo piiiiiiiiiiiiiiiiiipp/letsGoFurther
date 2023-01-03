@@ -26,9 +26,15 @@ func New() *Validator {
 func (v *Validator) Valid() bool {
 	return len(v.Errors) == 0
 }
+func In(value string, list ...string) bool {
+	for i := range list {
+		if value == list[i] {
+			return true
+		}
+	}
+	return false
+}
 
-// AddError adds an error message to the map (so long as no entry already exists for
-// the given key).
 func (v *Validator) AddError(key, message string) {
 	if _, exists := v.Errors[key]; !exists {
 		v.Errors[key] = message
@@ -57,9 +63,8 @@ func Matches(value string, rx *regexp.Regexp) bool {
 	return rx.MatchString(value)
 }
 
-// Generic function which returns true if all values in a slice are unique.
-func Unique[T comparable](values []T) bool {
-	uniqueValues := make(map[T]bool)
+func Unique(values []string) bool {
+	uniqueValues := make(map[string]bool)
 	for _, value := range values {
 		uniqueValues[value] = true
 	}
