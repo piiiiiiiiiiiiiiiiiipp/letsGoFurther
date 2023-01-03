@@ -1,6 +1,7 @@
 package main
 
 import (
+	"awesomeProject/internal/data"
 	"context"
 	"database/sql"
 	"flag"
@@ -29,6 +30,7 @@ type config struct {
 type application struct {
 	config config
 	logger *log.Logger
+	models data.Models
 }
 
 func main() {
@@ -49,16 +51,15 @@ func main() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	// Defer a call to db.Close() so that the connection pool is closed before the
-	// main() function exits.
+
 	defer db.Close()
-	// Also log a message to say that the connection pool has been successfully
-	// established.
+
 	logger.Printf("database connection pool established")
 
 	app := &application{
 		config: cfg,
 		logger: logger,
+		models: data.NewModels(db),
 	}
 
 	srv := &http.Server{
@@ -69,8 +70,8 @@ func main() {
 		WriteTimeout: 30 * time.Second,
 	}
 
-	// Start the HTTP server.
 	logger.Printf("starting %s server on %s", cfg.env, srv.Addr)
+
 	err = srv.ListenAndServe()
 	logger.Fatal(err)
 }
@@ -80,22 +81,21 @@ func openDB(cfg config) (*sql.DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	// Set the maximum number of open (in-use + idle) connections in the pool. Note that
-	// passing a value less than or equal to 0 will mean there is no limit.
+
 	db.SetMaxOpenConns(cfg.db.maxOpenConns)
-	// Set the maximum number of idle connections in the pool. Again, passing a value
-	// less than or equal to 0 will mean there is no limit.
+
 	db.SetMaxIdleConns(cfg.db.maxIdleConns)
-	// Use the time.ParseDuration() function to convert the idle timeout duration string
-	// to a time.Duration type.
+
 	duration, err := time.ParseDuration(cfg.db.maxIdleTime)
 	if err != nil {
 		return nil, err
 	}
-	// Set the maximum idle timeout.
+
 	db.SetConnMaxIdleTime(duration)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
+
 	err = db.PingContext(ctx)
 	if err != nil {
 		return nil, err
